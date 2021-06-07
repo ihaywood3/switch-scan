@@ -1,3 +1,4 @@
+;;; -*- lexical-binding: t -*-
 ; switch-scan.el - Emacs support for switch scanning input
 					;
 ; This program is free software: you can redistribute it and/or modify
@@ -29,14 +30,14 @@
 (defcustom switch-scan-default-keyboard
   '(("t" "o" "e" "f" "c" "d" "b" "y" "x")
     ("a" "h" "n" "p" "u" "l" "w" "v" "q")
-    ("i" "s" "r" "m" ("SPC" . 32) "g" "k" "z" "j")
+    ("i" "s" "r" "m" ("SPC" . "<SPC>") "g" "k" "z" "j")
     ("0" "1" "2" "3" "4" "5" "6" "7" "8" "9")
     ("." ":" "?" "," "{" "}" "<" ">" "&" "^" "~")
     ("-" "=" "+" "(" ")" "[" "]" "%" "_" "!" "$")
     (";" "/" "'" "\"" "\\" "#" "@" "*" "|" "`")
-    (("CTRL" . 'control) ("RET" . 13) ("BKSPC" . 8) ("TAB" . 9) ("ESC" . 27) ("DEL" . 127)
-     ("UP" . 'up) ("DOWN" . 'down) ("LEFT" . 'left) ("RIGHT" . 'right)
-     ("SHIFT" . 'shift)))
+    (("CTRL" . control) ("RET" . "<RET>") ("BKSPC" . "<backspace>") ("TAB" . "<tab>") ("META" . meta) ("DEL" . "<DEL>")
+     ("UP" . "<up>") ("DOWN" . "<down>") ("LEFT" . "<left>") ("RIGHT" . "<right>")
+     ("SHIFT" . shift)))
   "keyboard definition for all major modes unless otherwise defined in switch-scan-specific-keyboards"
   :type 'sexp)
 
@@ -44,7 +45,7 @@
   "an alist of specific keyboards for different major modes"
   :type 'sexp)
 
-(defcustom switch-scan-driver-path "~/.emacs/joystick.py"
+(defcustom switch-scan-driver-path "/home/ian/switch-scan/joystick.py"
   "path to driver script to receive switch scanning events"
   :type '(file :must-match t))
 
@@ -52,11 +53,13 @@
   "which joystick to use (starting at 0)"
   :type 'integer)
 
-(defcustom switch-scan-joystick-button 0
+(defcustom switch-scan-joystick-button 1
   "which joystick button to use (starting at 0)"
   :type 'integer)
 
 ; "private" variables
+
+(defvar sscan-thread nil)
 
 (defvar sscan-thread-flag t
   "flag to signal when the thread stops")
@@ -81,13 +84,16 @@
 	 (split-window (frame-root-window) -1))
 	(sscan-process (make-process
 			:name "sscan-driver"
-			:command '(switch-scan-driver-path
-				   switch-scan-joystick
-				   switch-scan-joystick-button)
+			:command (list
+				  "/usr/bin/python3"
+				  switch-scan-driver-path
+				  (number-to-string switch-scan-joystick)
+				  (number-to-string switch-scan-joystick-button))
 			:connection-type 'pipe
 			:noquery nil
 			:filter #'(lambda (p s) ;; subprocess sends back events as sexps
-				    (eval (car (read-from-string s))))
+				    ;; (eval (car (read-from-string s))))
+				    (message "output `%s'" s))
 			:sentinel #'(lambda (p s) ;; end sscan-cycle if subprocess dies
 				      (setq sscan-thread-flag nil)))))
     ;; configure window
@@ -101,7 +107,8 @@
     ;; start background thread
     (setq sscan-thread-flag t)
     (make-thread
-     #'(lambda (sscan-cycle sscan-buffer sscan-window sscan-process))
+     #'(lambda ()
+	 (sscan-cycle sscan-buffer sscan-window sscan-process))
      "*sscan-cycle*")))
 
 (defun switch-scan-stop ()
