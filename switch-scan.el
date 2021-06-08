@@ -92,8 +92,7 @@
 			:connection-type 'pipe
 			:noquery nil
 			:filter #'(lambda (p s) ;; subprocess sends back events as sexps
-				    ;; (eval (car (read-from-string s))))
-				    (message "output `%s'" s))
+				    (eval (car (read-from-string s))))
 			:sentinel #'(lambda (p s) ;; end sscan-cycle if subprocess dies
 				      (setq sscan-thread-flag nil)))))
     ;; configure window
@@ -128,54 +127,60 @@
 	(setq sscan-unpressed-flag nil)      
 	(sleep-for (/ switch-scan-line-pause 1000.0))
 	(when sscan-pressed-flag ;; user has selected this line 
-	  (dotimes (sel (length idx))
-	    (sscan-buffer-set sel) ;; redisplay line with each irem selected 
-	    (setq sscan-pressed-flag nil)
-	    (setq sscan-unpressed-flag nil)
-	    (sleep-for (/ switch-scan-item-pause 1000.0))
-	    (when sscan-pressed-flag ;; user has selected this item
-	      (cond
-	       ((eq sscan-selected 'shift) ;; modifier key chosen 
-		(setq shift-key t))
-	       ((eq sscan-selected 'meta)
-		(setq meta-key t))
-	       ((eq sscan-selected 'alt)
-		(setq alt-key t))
-	       ((eq sscan-selected 'super)
-		(setq super-key t))
-	       ((eq sscan-selected 'hyper)
-		(setq hyper-key t))
-	       ((eq sscan-selected 'control)
-		(setq control-key t))
-	       ;; "standard" string defined keys
-	       ((stringp sscan-selected)
-		;; if modifiers in effect add prefixes to key definition 
-		(when meta-key
-		  (setq sscan-selected (concat "M-" sscan-selected)))
-		(when control-key
-		  (setq sscan-selected (concat "C-" sscan-selected)))
-		(when alt-key
-		  (setq sscan-selected (concat "A-" sscan-selected)))
-		(when super-key
-		  (setq sscan-selected (concat "s-" sscan-selected)))
-		(when hyper-key
-		  (setq sscan-selected (concat "H-" sscan-selected)))
-		;; reset the modifier flags
-		(setq shift-key nil)
-		(setq meta-key nil)
-		(setq control-key nil)
-		(setq alt-key nil)
-		(setq super-key nil)
-		(setq hyper-key nil)
-		;; synthesise a keyboard event 
-		(setq unread-command-events
+	  (let ((sel 0) (flag t))
+	    (while flag
+	      (when (= sel (1- (length idx))) (setq flag nil))
+	      (sscan-buffer-set sel) ;; redisplay line with each irem selected 
+	      (setq sscan-pressed-flag nil)
+	      (setq sscan-unpressed-flag nil)
+	      (sleep-for (/ switch-scan-item-pause 1000.0))
+	      (when sscan-pressed-flag ;; user has selected this item
+		(setq flag nil)
+		(setq sscan-pressed-flag nil)
+		(setq sscan-unpressed-flag nil)
+		(cond
+		 ((eq sscan-selected 'shift) ;; modifier key chosen 
+		  (setq shift-key t))
+		 ((eq sscan-selected 'meta)
+		  (setq meta-key t))
+		 ((eq sscan-selected 'alt)
+		  (setq alt-key t))
+		 ((eq sscan-selected 'super)
+		  (setq super-key t))
+		 ((eq sscan-selected 'hyper)
+		  (setq hyper-key t))
+		 ((eq sscan-selected 'control)
+		  (setq control-key t))
+		 ;; "standard" string defined keys
+		 ((stringp sscan-selected)
+		  ;; if modifiers in effect add prefixes to key definition 
+		  (when meta-key
+		    (setq sscan-selected (concat "M-" sscan-selected)))
+		  (when control-key
+		    (setq sscan-selected (concat "C-" sscan-selected)))
+		  (when alt-key
+		    (setq sscan-selected (concat "A-" sscan-selected)))
+		  (when super-key
+		    (setq sscan-selected (concat "s-" sscan-selected)))
+		  (when hyper-key
+		    (setq sscan-selected (concat "H-" sscan-selected)))
+		  ;; reset the modifier flags
+		  (setq shift-key nil)
+		  (setq meta-key nil)
+		  (setq control-key nil)
+		  (setq alt-key nil)
+		  (setq super-key nil)
+		  (setq hyper-key nil)
+		  ;; synthesise a keyboard event 
+		  (setq unread-command-events
 		      (nreverse (cons (cons t
 					    (car (listify-key-sequence (kbd sscan-selected))))
 				      (nreverse unread-command-events)))))
-	       ;; keyboard item is a function - call it
-	       ((functionp sscan-selected)
-		(funcall sscan-selected))
-	       )))))))
+	       ;; keybard item is a function - call it
+		 ((functionp sscan-selected)
+		  (funcall sscan-selected))))
+	      (setq sel (1+ sel))
+	       ))))))
   ;; main loop has ended - cleanup
   (delete-window sscan-window)
   (kill-buffer sscan-buffer)
@@ -202,10 +207,10 @@
 		  (cond
 		   ((stringp x)
 		    (when shift-key (setq x (upcase x)))
-		    (setq sscan-selected x)
+		    (when (= sel n) (setq sscan-selected x))
 		    x)
 		   ((consp x)
-		    (setq sscan-selected (cdr x))
+		    (when (= sel n) (setq sscan-selected (cdr x)))
 		    (car x)))
 		  " ")
 	  'face `(:reverse-video ,(= sel n))))

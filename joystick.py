@@ -30,18 +30,26 @@ btn_id = int(sys.argv[2])
 
 
 def error(s):
-    print('(progn (message "%s") (setq sscan-thread-flag nil))' % s)
+    sys.stdout.write('(progn (message "%s") (setq sscan-thread-flag nil))\n' % s)
+    sys.stdout.flush()
     sys.exit(1)
 
+    
+def msg(s):
+    sys.stdout.write("(message \"%s\")\n" % s)
+    sys.stdout.flush()    
 
+    
 def pressed():
-    print("(setq sscan-pressed-flag t)")
+    sys.stdout.write("(setq sscan-pressed-flag t)\n")
+    sys.stdout.flush()    
 
-
+    
 def unpressed():
-    print("(setq sscan-unpressed-flag t)")
+    sys.stdout.write("(setq sscan-unpressed-flag t)\n")
+    sys.stdout.flush()    
 
-
+    
 if platform.system() == "Windows":
     # source https://gist.github.com/rdb/8883307
     # Released by rdb under the Unlicense (unlicense.org)
@@ -76,6 +84,7 @@ if platform.system() == "Windows":
     num_devs = joyGetNumDevs()
     if num_devs == 0:
         error("Joystick driver not loaded.")
+    msg("Windows joystick")
 
     # Initialise the JOYINFOEX structure.
     info = JOYINFOEX()
@@ -109,6 +118,7 @@ elif platform.system() == "Linux":
         # Open the joystick device.
         fn = "/dev/input/js%d" % joy_id
         jsdev = open(fn, "rb")
+        msg("Linux joystick")
 
         # Get number of buttons
         buf = array.array("B", [0])
