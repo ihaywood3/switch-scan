@@ -19,7 +19,7 @@
   "configuration for switch scanning"
   :group 'hardware)
 
-(defcustom switch-scan-line-pause 600
+(defcustom switch-scan-line-pause 950
   "milliseconds to pause between each scanning line"
   :type 'integer)
 
@@ -81,7 +81,7 @@
   (let ((sscan-buffer
 	 (generate-new-buffer " *switch-scan*"))
 	(sscan-window ;; one-line window at bottom of screen
-	 (split-window (frame-root-window) -1))
+	 (split-window (frame-root-window) -2))
 	(sscan-process (make-process
 			:name "sscan-driver"
 			:command (list
@@ -133,7 +133,9 @@
 	      (sscan-buffer-set sel) ;; redisplay line with each irem selected 
 	      (setq sscan-pressed-flag nil)
 	      (setq sscan-unpressed-flag nil)
-	      (sleep-for (/ switch-scan-item-pause 1000.0))
+	      (sleep-for (/ (* switch-scan-item-pause ;; wait longer first item 
+			       (if (= sel 0) 1.5 1))
+			    1000.0))
 	      (when sscan-pressed-flag ;; user has selected this item
 		(setq flag nil)
 		(setq sscan-pressed-flag nil)
